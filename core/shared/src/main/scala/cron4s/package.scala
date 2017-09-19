@@ -17,4 +17,11 @@
 import cron4s.syntax.AllSyntax
 import cron4s.expr.NodeConversions
 
-package object cron4s extends AllSyntax with NodeConversions
+package object cron4s extends AllSyntax with NodeConversions {
+  type SecondsNode     = expr.SecondsNode
+  type MinutesNode     = expr.MinutesNode
+  type HoursNode       = expr.HoursNode
+  type DaysOfMonthNode = expr.DaysOfMonthNode
+  type MonthsNode      = expr.MonthsNode
+  type DaysOfWeekNode  = expr.DaysOfWeekNode
+}
