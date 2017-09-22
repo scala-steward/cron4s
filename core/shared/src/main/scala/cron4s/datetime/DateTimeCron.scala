@@ -53,7 +53,7 @@ trait DateTimeCron[T] {
 
   def supportedFields: List[CronField]
 
-  def field[F <: CronField](expr: T)(implicit selector: FieldSelector[T, F]): selector.Out[F] =
+  def field[F <: CronField](expr: T)(implicit selector: FieldSelector[T, F]): selector.Out =
     selector.selectFrom(expr)
 
 }

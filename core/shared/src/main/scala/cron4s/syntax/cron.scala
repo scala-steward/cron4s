@@ -51,7 +51,7 @@ private[syntax] class DateTimeCronOps[E](self: E, tc: DateTimeCron[E]) {
   def supportedFields: List[CronField] =
     tc.supportedFields
 
-  def field[F <: CronField](implicit selector: FieldSelector[E, F]): selector.Out[F] =
+  def field[F <: CronField](implicit selector: FieldSelector[E, F]): selector.Out =
     tc.field[F](self)
 
 }

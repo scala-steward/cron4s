@@ -26,21 +26,64 @@ import scala.annotation.implicitNotFound
 /**
   * Created by alonsodomin on 10/02/2017.
   */
+
+trait FieldBinding[F <: CronField] {
+  type NodeType
+}
+object FieldBinding {
+  import CronField._
+
+  type Aux[F <: CronField, N] = FieldBinding[F] { type NodeType = N }
+
+  implicit object SecondsBinding extends FieldBinding[Second] {
+    type NodeType = SecondsNode
+  }
+  implicit object MinutesBinding extends FieldBinding[Minute] {
+    type NodeType = MinutesNode
+  }
+  implicit object HoursBinding extends FieldBinding[Hour] {
+    type NodeType = HoursNode
+  }
+  implicit object DaysOfMonthBinding extends FieldBinding[DayOfMonth] {
+    type NodeType = DaysOfMonthNode
+  }
+  implicit object MonthsBinding extends FieldBinding[Month] {
+    type NodeType = MonthsNode
+  }
+  implicit object DaysOfWeekBinding extends FieldBinding[DayOfWeek] {
+    type NodeType = DaysOfWeekNode
+  }
+}
+
+trait FieldSelectorBinding[F <: CronField] {
+  type NodeType
+
+  def selectorOn[E](expr: E)(implicit ev: FieldBinding.Aux[F, NodeType]): FieldSelector.Aux[E, F, NodeType]
+
+}
+object FieldSelectorBinding {
+  type Aux[F <: CronField, N] = FieldSelectorBinding[F] { type NodeType = N }
+}
+
 @implicitNotFound("Field ${F} is not a member of expression ${A}")
 sealed trait FieldSelector[A, F <: CronField] {
   type Raw <: HList
-  type Out[X <: CronField]
+  type Out
 
-  protected implicit def hlistSelect: Lazy[Selector[Raw, Out[F]]]
+  protected implicit def hlistSelect: Lazy[Selector[Raw, Out]]
 
-  def selectFrom(expr: A): Out[F]
+  def selectFrom(expr: A): Out
 
 }
 
 object FieldSelector {
+  type Aux[A, F <: CronField, O] = FieldSelector[A, F] { type Out = O }
+
   import CronField._
 
   def apply[A, F <: CronField](implicit ev: FieldSelector[A, F]): FieldSelector[A, F] = ev
+
+  implicit def deriveSelector[F <: CronField, E, N](implicit binding: FieldBinding.Aux[F, N]): FieldSelector.Aux[E, F, N] = ???
 
   implicit val SecondsFromCronExpr: FieldSelector[CronExpr, Second] = new FullCronFieldNodeSelector[Second] {
     implicit val hlistSelect: Lazy[Selector[RawCronExpr, FieldNode[Second]]] = Selector[RawCronExpr, FieldNode[Second]]
@@ -87,7 +130,7 @@ object FieldSelector {
   // Base classes adding type refinements for the typeclass instances
 
   private[this] abstract class FieldNodeSelector[A, F <: CronField] extends FieldSelector[A, F] {
-    type Out[X <: CronField] = FieldNode[X]
+    type Out = FieldNode[F]
   }
   private[this] abstract class FullCronFieldNodeSelector[F <: CronField] extends FieldNodeSelector[CronExpr, F] {
     type Raw = RawCronExpr
@@ -106,7 +149,7 @@ object FieldSelector {
   }
 
   private[this] abstract class FieldNodeWithAnySelector[A, F <: CronField] extends FieldSelector[A, F] {
-    type Out[X <: CronField] = FieldNodeWithAny[X]
+    type Out = FieldNodeWithAny[F]
   }
   private[this] abstract class FullCronFieldNodeWithAnySelector[F <: CronField] extends FieldNodeWithAnySelector[CronExpr, F] {
     type Raw = RawCronExpr
