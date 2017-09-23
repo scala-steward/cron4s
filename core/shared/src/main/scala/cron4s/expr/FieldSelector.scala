@@ -18,7 +18,7 @@ package cron4s.expr
 
 import cron4s.CronField
 
-import shapeless.{HList, Lazy}
+import shapeless.{Generic, HList, Lazy}
 import shapeless.ops.hlist.Selector
 
 import scala.annotation.implicitNotFound
@@ -55,14 +55,29 @@ object FieldBinding {
   }
 }
 
-trait FieldSelectorBinding[F <: CronField] {
-  type NodeType
-
-  def selectorOn[E](expr: E)(implicit ev: FieldBinding.Aux[F, NodeType]): FieldSelector.Aux[E, F, NodeType]
-
+@implicitNotFound("Field ${F} is not a member of expression ${E}")
+sealed trait NodeExtractor[E, F <: CronField] {
+  type N
+  def extractFrom(expr: E): N
 }
-object FieldSelectorBinding {
-  type Aux[F <: CronField, N] = FieldSelectorBinding[F] { type NodeType = N }
+
+object NodeExtractor {
+
+  type Aux[E, F, N0] = NodeExtractor[E, F] { type N = N0 }
+
+  implicit def deriveExtractor[E, F <: CronField, Rw <: HList, N0](
+    implicit
+    generic: Generic.Aux[E, Rw],
+    fieldBinding: FieldBinding.Aux[F, N0],
+    selector: Selector[Rw, N0]
+  ): NodeExtractor[E, F] = new NodeExtractor[E, F] {
+    type N = N0
+
+    def extractFrom(expr: E) =
+      selector(generic.to(expr))
+
+  }
+
 }
 
 @implicitNotFound("Field ${F} is not a member of expression ${A}")
