@@ -76,6 +76,8 @@ private[javatime] final class JavaTemporalInstance[DT <: Temporal] extends IsDat
       } else Success(dt)
     }
 
+    println(s"Setting value $value at field $field in date $dateTime")
+
     if (!dateTime.isSupported(temporalField)) UnsupportedField(field).asLeft
     else {
       val realVal = if (field == DayOfWeek) value + DayOfWeekOffset else value

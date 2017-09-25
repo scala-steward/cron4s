@@ -40,12 +40,18 @@ private[datetime] final class Stepper[DateTime](DT: IsDateTime[DateTime]) {
       DT.set(dt, node.unit.field, newValue)
         .map(_ -> carryOver)
         .recover {
-          case InvalidFieldValue(_, _) =>
+          case InvalidFieldValue(f, v) =>
             val newCarryOver = step.direction match {
               case Direction.Forward   => Math.max(carryOver, step.direction.sign)
               case Direction.Backwards => Math.min(carryOver, step.direction.sign)
             }
+            println(s"Invalid value ${v} for field ${f}")
             dt -> newCarryOver
+        }
+        .recoverWith {
+          case u @ UnsupportedField(f) =>
+            println(s"Unsupported field $f")
+            Left(u)
         }
         .toOption
     }
@@ -105,7 +111,18 @@ private[datetime] final class Stepper[DateTime](DT: IsDateTime[DateTime]) {
         result                 <- stepOverDayOfWeek(Some((resetTime, dt, step)), daysOfWeekNode)
       } yield result
     }
-    implicit def caseDateExpr = at[StepST, DateCronExpr]((stepSt, expr) => expr.raw.foldLeft(stepSt)(stepPerNode))
+
+    implicit def caseDateExpr = at[StepST, DateCronExpr] { (stepSt, expr) =>
+      val dateWithoutDOW = expr.raw.take(2)
+      val daysOfWeekNode = expr.raw.select[DaysOfWeekNode]
+
+      for {
+        (_, dt, step) <- dateWithoutDOW.foldLeft(stepSt)(stepPerNode)
+        result        <- stepOverDayOfWeek(Some((identityReset, dt, step)), daysOfWeekNode)
+      } yield result
+      //expr.raw.foldLeft(stepSt)(stepPerNode)
+    }
+
     implicit def caseTimeExpr = at[StepST, TimeCronExpr]((stepSt, expr) => expr.raw.foldLeft(stepSt)(stepPerNode))
   }
 
