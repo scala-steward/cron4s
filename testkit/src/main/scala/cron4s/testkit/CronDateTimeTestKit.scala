@@ -52,7 +52,7 @@ abstract class CronDateTimeTestKit[DateTime: IsDateTime: Eq: Show]
   import CronDateTimeTestKit._
 
   lazy val samples = Seq(
-  //("expr",           "from",                              "stepSize", "expected"),
+  //("expr",               "from",                              "stepSize", "expected"),
     (OnlyTuesdaysAt12,     createDateTime(0, 0, 0, 1, 8, 2016),          1, createDateTime(0, 0, 12, 2, 8, 2016)),
     (EachMinutesOnSundays, createDateTime(0, 0, 0, 1, 8, 2016),          1, createDateTime(0, 0, 0, 7, 8, 2016)),
     (BetweenDayOfWeek,     createDateTime(0, 0, 2, 11, 3, 2016),         1, createDateTime(0, 0, 0, 15, 3, 2016)),
@@ -60,14 +60,18 @@ abstract class CronDateTimeTestKit[DateTime: IsDateTime: Eq: Show]
     (BetweenMonth,         createDateTime(0, 1, 1, 4, 11, 2016),         1, createDateTime(0, 0, 0, 1, 4, 2017)),
     (Every10Minutes,       createDateTime(42, 39, 16, 18, 2, 2017),      1, createDateTime(0, 40, 16, 18, 2, 2017)),
     (Every31DayOfMonth,    createDateTime(0, 0, 0, 4, 9, 2016),          1, createDateTime(1, 1, 1, 31, 10, 2016)),
-    (AnyDayOfMonth,        createDateTime(45, 30, 23, 30, 6, 2017),      1, createDateTime(4, 31, 4, 1, 7, 2017))
+    (AnyDayOfMonth,        createDateTime(45, 30, 23, 30, 6, 2017),      1, createDateTime(4, 31, 4, 1, 7, 2017)),
+    (AnyDayOfMonth,        createDateTime(34, 4, 0, 1, 12, 2016),       -3, createDateTime(4, 31, 4, 30, 9, 2016))
   )
 
   "Cron.step" should "match expected result" in {
     val test = Eq[DateTime]
 
     for ((expr, initial, stepSize, expected) <- samples) {
-      val Some(returnedDateTime) = expr.step(initial, stepSize)
+      val stepResult = expr.step(initial, stepSize)
+      assert(stepResult.isDefined, s"[${expr.show}]: (${initial.show}, $stepSize) => None != ${expected.show}")
+
+      val returnedDateTime = stepResult.get
       val matchesExpected = test.eqv(returnedDateTime, expected)
 
       assert(matchesExpected,
